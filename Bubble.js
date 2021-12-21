@@ -7,19 +7,23 @@ const FREQUENCIES = {
   7: 'w',
   30: 'm',
 };
+
 const MS_IN_DAY = 24 * 60 * 60 * 1000;
+
 const getBubbleColour = timeRatio =>
   timeRatio > 1
     ? 'darkred'
     : `rgb(${timeRatio * 255}, 70, ${255 - timeRatio * 255})`;
+
 const getFrequencyString = (times, period) =>
   times === 1 ? `${FREQUENCIES[period]}` : `${times} / ${FREQUENCIES[period]}`;
 
-const Bubble = ({now, title, frequency, lastReset, reset}) => {
+const Bubble = ({now, title, frequency, lastReset, reset, selected}) => {
   const period = (frequency[1] * MS_IN_DAY) / frequency[0];
   const timeRatio = (now - lastReset) / period;
-  const backgroundStyle = {backgroundColor: getBubbleColour(timeRatio)};
-  const bubbleStyle = StyleSheet.flatten([backgroundStyle, styles.bubble]);
+  const backgroundStyle = { backgroundColor: getBubbleColour(timeRatio) };
+  const borderStyle = selected ? { borderColor: '#77E', borderWidth: 1 } : {};
+  const bubbleStyle = StyleSheet.flatten([backgroundStyle, borderStyle, styles.bubble]);
 
   return (
     <View style={bubbleStyle}>

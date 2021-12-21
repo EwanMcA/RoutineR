@@ -1,50 +1,61 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {Button, StyleSheet, Text, TextInput, View} from 'react-native';
-import { ButtonGroup } from 'react-native-elements';
+import {ButtonGroup} from 'react-native-elements';
 
-import { PERIOD } from './Home';
+export const PERIOD = {
+  DAY: 1,
+  WEEK: 7,
+  MONTH: 30,
+};
 
+const PERIOD_OPTIONS = ['DAY', 'WEEK', 'MONTH'];
 
-const AddTask = ({route, navigation}) => {
-  const [title, setTitle] = useState('');
-  const [times, setTimes] = useState(0);
+const Task = ({route, navigation}) => {
+  const {section, title, frequency, onSubmit} = route.params;
+  const [bubbleTitle, setBubbleTitle] = useState(title || '');
+  const [times, setTimes] = useState(frequency ? frequency[0] : 1);
   const [selectedPeriod, setSelectedPeriod] = useState(0);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Adding task to {route.params.section}</Text>
+      <Text style={styles.heading}>Section: {section}</Text>
       <TextInput
         style={styles.titleInput}
         placeholder="Enter a title..."
-        onChangeText={text => setTitle(text)}
+        onChangeText={text => setBubbleTitle(text)}
         maxLength={24}
-        placeholderTextColor='white'
+        placeholderTextColor="white"
+        defaultValue={title}
       />
       <TextInput
         style={styles.titleInput}
         placeholder="How often..."
         onChangeText={times => setTimes(times.replace(/[^0-9]/g, ''))}
         maxLength={6}
-        placeholderTextColor='white'
+        placeholderTextColor="white"
+        defaultValue={frequency && frequency[0]}
       />
       <Text style={styles.text}>per</Text>
       <ButtonGroup
         onPress={setSelectedPeriod}
         selectedIndex={selectedPeriod}
-        buttons={['DAY', 'WEEK', 'MONTH']}
+        buttons={PERIOD_OPTIONS}
         containerStyle={{height: 50}}
       />
       <View style={styles.addTaskButton}>
-      <Button
-        onPress={() => {
-          route.params.handleAdd(title, [times, [PERIOD.DAY, PERIOD.WEEK, PERIOD.MONTH][selectedPeriod]]);
-          navigation.navigate('Home');
-        }}
-        disabled={!title.length || !times}
-        title="+"
-        color="#333"
-        accessibilityLabel="Confirm Task"
-      />
+        <Button
+          onPress={() => {
+            onSubmit(bubbleTitle, [
+              times,
+              PERIOD[PERIOD_OPTIONS[selectedPeriod]],
+            ]);
+            navigation.navigate('Home');
+          }}
+          disabled={!bubbleTitle.length || !times}
+          title="+"
+          color="#333"
+          accessibilityLabel="Confirm Task"
+        />
       </View>
     </View>
   );
@@ -79,4 +90,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AddTask;
+export default Task;

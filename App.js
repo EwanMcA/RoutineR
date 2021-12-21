@@ -12,7 +12,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
 import Home from './Home';
-import AddTask from './AddTask';
+import Task from './Task';
 
 const Stack = createNativeStackNavigator();
 
@@ -28,7 +28,19 @@ const App: () => Node = () => (
       />
       <Stack.Screen
         name="Add Task"
-        component={AddTask}
+        component={Task}
+        options={{
+          headerStyle: {
+            backgroundColor: '#327',
+          },
+          headerTitleStyle: {
+            color: 'white',
+          },
+        }}
+      />
+      <Stack.Screen
+        name="Edit Task"
+        component={Task}
         options={{
           headerStyle: {
             backgroundColor: '#327',

@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import type {Node} from 'react';
+import {v4 as uuid} from 'uuid';
 import {
   Button,
   FlatList,
@@ -15,58 +16,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {Colors} from 'react-native/Libraries/NewAppScreen';
 
 import Bubble from './Bubble';
+import EditBar from './EditBar';
+import {EXAMPLE_BUBBLES, EXAMPLE_SECTIONS} from './ExampleData';
 
 const NUM_COLUMNS = 3;
-export const PERIOD = {
-  DAY: 1,
-  WEEK: 7,
-  MONTH: 30,
-};
 
-const EXAMPLE_DATA = {
-  excercise: {
-    Cardio: {
-      frequency: [3, PERIOD.WEEK],
-      lastReset: Date.now(),
-    },
-    Resistance: {
-      frequency: [2, PERIOD.WEEK],
-      lastReset: Date.now(),
-    },
-  },
-  wellbeing: {
-    Meditate: {
-      frequency: [2000, PERIOD.DAY],
-      lastReset: Date.now(),
-    },
-    Read: {
-      frequency: [3, PERIOD.WEEK],
-      lastReset: Date.now(),
-    },
-  },
-  misc: {
-    Cook: {
-      frequency: [1, PERIOD.WEEK],
-      lastReset: Date.now(),
-    },
-    'Water Plants': {
-      frequency: [2, PERIOD.MONTH],
-      lastReset: Date.now(),
-    },
-    Code: {
-      frequency: [1, PERIOD.WEEK],
-      lastReset: Date.now(),
-    },
-    Italian: {
-      frequency: [4, PERIOD.WEEK],
-      lastReset: Date.now(),
-    },
-    Brain: {
-      frequency: [4, PERIOD.WEEK],
-      lastReset: Date.now(),
-    },
-  },
-};
+const BUBBLES_DATA_KEY = 'bubbles';
+const SECTIONS_DATA_KEY = 'sections';
 
 const storeBubbles = async bubbles => {
   try {
@@ -77,9 +33,9 @@ const storeBubbles = async bubbles => {
   }
 };
 
-const getBubbles = async () => {
+const fetchData = async (key) => {
   try {
-    const jsonValue = await AsyncStorage.getItem('bubbles');
+    const jsonValue = await AsyncStorage.getItem(key);
     return jsonValue != null ? JSON.parse(jsonValue) : null;
   } catch (e) {
     console.error(e);
@@ -87,17 +43,23 @@ const getBubbles = async () => {
 };
 
 const Home = ({navigation}) => {
-  const [bubbles, setBubbles] = useState(EXAMPLE_DATA);
+  const [bubbles, setBubbles] = useState([]);
+  const [sections, setSections] = useState([]);
   const [now, setNow] = useState(Date.now());
+  const [selectedBubbles, setSelectedBubbles] = useState([]);
+  const editMode = !!selectedBubbles.length;
 
-  useEffect(async () => {
+  useEffect(() => {
     const setDate = () => setNow(Date.now());
     setInterval(setDate, 5000);
-    getBubbles().then(storedBubbles =>
-      setBubbles(storedBubbles || EXAMPLE_DATA),
+    fetchData(BUBBLES_DATA_KEY).then(storedBubbles =>
+      setBubbles(storedBubbles || EXAMPLE_BUBBLES),
+    );
+    fetchData(SECTIONS_DATA_KEY).then(storedSections =>
+      setSections(storedSections || EXAMPLE_SECTIONS),
     );
 
-    return clearInterval(setDate);
+    return () => clearInterval(setDate);
   }, []);
 
   const backgroundStyle = {
@@ -105,56 +67,82 @@ const Home = ({navigation}) => {
     height: '100%',
   };
 
-  const handleReset = (section, title) => {
-    const updatedBubbles = {
-      ...bubbles,
-      [section]: {
-        ...bubbles[section],
-        [title]: {
-          ...bubbles[section][title],
-          lastReset: Date.now(),
-        },
-      },
-    };
-    setBubbles(updatedBubbles);
-    storeBubbles(updatedBubbles);
-  };
-
-  const handleAddTask = (section, title, frequency) => {
-    const updatedBubbles = {
-      ...bubbles,
-      [section]: {
-        ...bubbles[section],
-        [title]: {
-          frequency: frequency,
-          lastReset: Date.now(),
-        },
-      },
-    };
-    setBubbles(updatedBubbles);
-    storeBubbles(updatedBubbles);
-  };
-
-  const handleDeleteTask = (section, title) => {
+  const resetBubble = id => {
     const updatedBubbles = bubbles;
-    delete updatedBubbles[section][title];
+    updatedBubbles[id].lastReset = Date.now();
     setBubbles(updatedBubbles);
     storeBubbles(updatedBubbles);
+
+    // trigger bubble render
+    setNow(Date.now());
+  };
+
+  const createOrUpdateTask = (section, title, frequency, id, lastReset) => {
+    const updatedBubbles = {
+      ...bubbles,
+      [id || uuid()]: {
+        section: section,
+        title: title,
+        frequency: frequency,
+        lastReset: lastReset || Date.now(),
+      },
+    };
+    setBubbles(updatedBubbles);
+    storeBubbles(updatedBubbles);
+  };
+
+  const deleteTasks = () => {
+    const updatedBubbles = bubbles;
+    selectedBubbles.forEach(id => {
+      delete updatedBubbles[id];
+    });
+    setBubbles(updatedBubbles);
+    storeBubbles(updatedBubbles);
+    setSelectedBubbles([]);
+
+    // trigger bubble render
+    setNow(Date.now());
+  };
+
+  const handleBubblePress = id => {
+    if (editMode) {
+      if (selectedBubbles.includes(id)) {
+        setSelectedBubbles(selectedBubbles.filter(bubble => bubble !== id));
+      } else {
+        setSelectedBubbles([...selectedBubbles, id]);
+      }
+    }
+  };
+
+  const editBubble = id => {
+    const bubble = bubbles[selectedBubbles[0]];
+    setSelectedBubbles([]);
+    navigation.navigate('Edit Task', {
+      ...bubble,
+      onSubmit: (title, frequency) =>
+        createOrUpdateTask(
+          bubble.section,
+          title,
+          frequency,
+          id,
+          bubble.lastReset,
+        ),
+    });
   };
 
   return (
     <SafeAreaView style={backgroundStyle}>
-      {Object.keys(bubbles).map(section => (
+      {sections.map(section => (
         <View key={section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.heading}>{section}</Text>
-            <View style={styles.addSectionButton}>
+            <View style={styles.addButton}>
               <Button
                 onPress={() =>
                   navigation.navigate('Add Task', {
                     section: section,
-                    handleAdd: (title, frequency) =>
-                      handleAddTask(section, title, frequency),
+                    onSubmit: (title, frequency) =>
+                      createOrUpdateTask(section, title, frequency),
                   })
                 }
                 title=" + "
@@ -164,39 +152,49 @@ const Home = ({navigation}) => {
             </View>
           </View>
           <FlatList
-            data={Object.keys(bubbles[section])}
+            data={Object.keys(bubbles).filter(
+              id => bubbles[id].section === section,
+            )}
             numColumns={NUM_COLUMNS}
             keyExtractor={({item}) => item}
             renderItem={({item}) => (
               <View style={{width: `${100 / NUM_COLUMNS}%`}}>
                 <TouchableHighlight
-                  onLongPress={() => setEditBubble(item)}
-                  underlayColor="white">
+                  onPress={() => handleBubblePress(item)}
+                  onLongPress={() =>
+                    setSelectedBubbles([...selectedBubbles, item])
+                  }>
                   <Bubble
-                    {...bubbles[section][item]}
-                    title={item}
+                    {...bubbles[item]}
                     now={now}
-                    reset={() => handleReset(section, item)}
+                    reset={() =>
+                      editMode ? handleBubblePress(item) : resetBubble(item)
+                    }
+                    selected={selectedBubbles.includes(item)}
                   />
                 </TouchableHighlight>
               </View>
             )}
-            columnWrapperStyle={
-              {
-                //justifyContent: 'space-evenly',
-              }
-            }
           />
         </View>
       ))}
-      <View style={styles.addSectionButton}>
-        <Button
-          onPress={() => {}}
-          title="+"
-          color="#333"
-          accessibilityLabel="Add Section"
+      {editMode ? (
+        <EditBar
+          canEdit={selectedBubbles.length === 1}
+          setSelectedBubbles={setSelectedBubbles}
+          onEdit={() => editBubble(selectedBubbles[0])}
+          onDelete={deleteTasks}
         />
-      </View>
+      ) : (
+        <View style={styles.addButton}>
+          <Button
+            onPress={() => {}}
+            title="+"
+            color="#333"
+            accessibilityLabel="Add Section"
+          />
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -215,11 +213,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     textTransform: 'capitalize',
   },
-  addSectionButton: {
+  addButton: {
     position: 'absolute',
     bottom: 5,
     width: 100,
-    right: 0,
+    right: 5,
   },
 });
 
