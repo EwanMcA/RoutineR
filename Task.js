@@ -48,7 +48,7 @@ const Task = ({route, navigation}) => {
       <View style={styles.history}>
         {[6, 5, 4, 3, 2, 1, 0].map(entry => {
           const date = new Date(now - 1000 * 60 * 60 * 24 * entry);
-          const filled = history.find(
+          const filled = history && history.find(
             h => new Date(h).toDateString() === date.toDateString(),
           );
           return (
