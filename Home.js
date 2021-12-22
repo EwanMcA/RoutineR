@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableHighlight,
   useColorScheme,
   View,
@@ -27,13 +28,22 @@ const SECTIONS_DATA_KEY = 'sections';
 const storeBubbles = async bubbles => {
   try {
     const jsonValue = JSON.stringify(bubbles);
-    await AsyncStorage.setItem('bubbles', jsonValue);
+    await AsyncStorage.setItem(BUBBLES_DATA_KEY, jsonValue);
   } catch (e) {
     console.error(e);
   }
 };
 
-const fetchData = async (key) => {
+const storeSections = async sections => {
+  try {
+    const jsonValue = JSON.stringify(sections);
+    await AsyncStorage.setItem(SECTIONS_DATA_KEY, jsonValue);
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+const fetchData = async key => {
   try {
     const jsonValue = await AsyncStorage.getItem(key);
     return jsonValue != null ? JSON.parse(jsonValue) : null;
@@ -47,7 +57,11 @@ const Home = ({navigation}) => {
   const [sections, setSections] = useState([]);
   const [now, setNow] = useState(Date.now());
   const [selectedBubbles, setSelectedBubbles] = useState([]);
-  const editMode = !!selectedBubbles.length;
+  const [sectionEditMode, setSectionEditMode] = useState(false);
+  const bubbleEditMode = !!selectedBubbles.length;
+  const hasEmptySection = !Object.values(bubbles).some(
+    bubble => bubble.section == sections[sections.length - 1],
+  );
 
   useEffect(() => {
     const setDate = () => setNow(Date.now());
@@ -69,7 +83,16 @@ const Home = ({navigation}) => {
 
   const resetBubble = id => {
     const updatedBubbles = bubbles;
-    updatedBubbles[id].lastReset = Date.now();
+    const bubble = updatedBubbles[id];
+    bubble.lastReset = Date.now();
+    if (bubble.history) {
+      bubble.history =
+        bubble.history.length > 6
+          ? [...bubble.history.slice(1), bubble.lastReset]
+          : [...bubble.history, bubble.lastReset];
+    } else {
+      bubble.history = [bubble.lastReset];
+    }
     setBubbles(updatedBubbles);
     storeBubbles(updatedBubbles);
 
@@ -105,7 +128,7 @@ const Home = ({navigation}) => {
   };
 
   const handleBubblePress = id => {
-    if (editMode) {
+    if (bubbleEditMode) {
       if (selectedBubbles.includes(id)) {
         setSelectedBubbles(selectedBubbles.filter(bubble => bubble !== id));
       } else {
@@ -168,7 +191,9 @@ const Home = ({navigation}) => {
                     {...bubbles[item]}
                     now={now}
                     reset={() =>
-                      editMode ? handleBubblePress(item) : resetBubble(item)
+                      bubbleEditMode
+                        ? handleBubblePress(item)
+                        : resetBubble(item)
                     }
                     selected={selectedBubbles.includes(item)}
                   />
@@ -178,7 +203,20 @@ const Home = ({navigation}) => {
           />
         </View>
       ))}
-      {editMode ? (
+      {sectionEditMode && (
+        <TextInput
+          placeholder="Enter section title..."
+          style={styles.heading}
+          placeholderTextColor="white"
+          onBlur={() => setSectionEditMode(false)}
+          onSubmitEditing={e => {
+            const updatedSections = [...sections, e.nativeEvent.text];
+            setSections(updatedSections);
+            storeSections(updatedSections);
+          }}
+        />
+      )}
+      {bubbleEditMode ? (
         <EditBar
           canEdit={selectedBubbles.length === 1}
           setSelectedBubbles={setSelectedBubbles}
@@ -186,14 +224,30 @@ const Home = ({navigation}) => {
           onDelete={deleteTasks}
         />
       ) : (
-        <View style={styles.addButton}>
-          <Button
-            onPress={() => {}}
-            title="+"
-            color="#333"
-            accessibilityLabel="Add Section"
-          />
-        </View>
+        <>
+          {hasEmptySection && (
+            <View style={styles.removeButton}>
+              <Button
+                onPress={() => {
+                  const updatedSections = sections.slice(0, -1);
+                  setSections(updatedSections);
+                  storeSections(updatedSections);
+                }}
+                title="-"
+                color="#333"
+                accessibilityLabel="Remove Section"
+              />
+            </View>
+          )}
+          <View style={styles.addButton}>
+            <Button
+              onPress={() => setSectionEditMode(true)}
+              title="+"
+              color="#333"
+              accessibilityLabel="Add Section"
+            />
+          </View>
+        </>
       )}
     </SafeAreaView>
   );
@@ -218,6 +272,12 @@ const styles = StyleSheet.create({
     bottom: 5,
     width: 100,
     right: 5,
+  },
+  removeButton: {
+    position: 'absolute',
+    bottom: 5,
+    width: 100,
+    left: 5,
   },
 });
 

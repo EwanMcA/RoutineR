@@ -47,6 +47,7 @@ const Bubble = ({now, title, frequency, lastReset, reset, selected}) => {
 
 const styles = StyleSheet.create({
   title: {
+    color: 'white',
     fontSize: 18,
   },
   bubble: {
@@ -60,6 +61,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   frequency: {
+    color: 'white',
     fontSize: 18,
   },
 });

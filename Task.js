@@ -10,11 +10,14 @@ export const PERIOD = {
 
 const PERIOD_OPTIONS = ['DAY', 'WEEK', 'MONTH'];
 
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 const Task = ({route, navigation}) => {
-  const {section, title, frequency, onSubmit} = route.params;
+  const {section, title, frequency, history, onSubmit} = route.params;
   const [bubbleTitle, setBubbleTitle] = useState(title || '');
   const [times, setTimes] = useState(frequency ? frequency[0] : 1);
   const [selectedPeriod, setSelectedPeriod] = useState(0);
+  const now = Date.now();
 
   return (
     <View style={styles.container}>
@@ -42,6 +45,20 @@ const Task = ({route, navigation}) => {
         buttons={PERIOD_OPTIONS}
         containerStyle={{height: 50}}
       />
+      <View style={styles.history}>
+        {[6, 5, 4, 3, 2, 1, 0].map(entry => {
+          const date = new Date(now - 1000 * 60 * 60 * 24 * entry);
+          const filled = history.find(
+            h => new Date(h).toDateString() === date.toDateString(),
+          );
+          return (
+            <View style={filled ? styles.filledHistory : styles.emptyHistory}>
+              <Text style={styles.date}>{DAYS[date.getDay()]}</Text>
+              <Text style={styles.date}>{date.getDate()}</Text>
+            </View>
+          );
+        })}
+      </View>
       <View style={styles.addTaskButton}>
         <Button
           onPress={() => {
@@ -82,9 +99,36 @@ const styles = StyleSheet.create({
   titleInput: {
     color: 'white',
   },
+  history: {
+    flexDirection: 'row',
+    marginTop: 40,
+    height: 50,
+    width: '100%',
+  },
+  filledHistory: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#252',
+    borderColor: 'white',
+    borderWidth: 1,
+    height: 50,
+    width: '14.25%',
+  },
+  emptyHistory: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#622',
+    borderColor: 'white',
+    borderWidth: 1,
+    height: 50,
+    width: '14.25%',
+  },
+  date: {
+    color: 'white',
+  },
   addTaskButton: {
     position: 'absolute',
-    bottom: 50,
+    bottom: 15,
     left: 20,
     width: 100,
   },
