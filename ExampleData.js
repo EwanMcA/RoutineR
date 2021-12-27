@@ -1,10 +1,11 @@
+import 'react-native-get-random-values';
 import {v4 as uuid} from 'uuid';
 
-import { PERIOD } from './Task';
+import { PERIOD } from './Constants';
 
 const NOW = Date.now();
 
-export const EXAMPLE_BUBBLES = {
+export const EXAMPLE_TASKS = {
   // exercise,
   [uuid()]: {
     title: 'Cardio',
